@@ -2,9 +2,7 @@ from app import app
 from flask import request, jsonify, abort, make_response
 import jwt
 import json
-import random,  requests
-
-requests.get
+import random
 
 def generateSessionToken():
     return ''.join([ chr(random.randint(65,90)) for i in range(random.randint(3,10))])
