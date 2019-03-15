@@ -64,12 +64,14 @@ def start():
         token = generateJwt(payload)
         data = {
             'token': token,
-            'days' : [],
-            'leaderboard': []
+            'days' : {},
+            'leaderboard': {}
         }
         ids = collection.insert_one(data).inserted_id
         print(ids)
-        return jsonify(token = token)
+        response = make_response(jsonify(token = token), 200)
+        response.headers['Access-Control-Allow-Origin'] = '*'
+        return response
 
     except Exception as err: 
         abort(err)
@@ -81,18 +83,25 @@ def turn():
 
     if request.method == 'POST':
         try:
-            token = request.get_json()['token'] 
+            req = request.get_json()
+            token = req['token'] 
             now =  decodeJwt(token)
-            print(0)
-            day = now["day"] + 1
-            step = now["step"] + 1
-
+            day = now["day"]
+            step = now["step"]
+            #send to bot
+            coll = connectToDB('tets', 'users')
+            id = coll.update_one(
+                {"token" : token},
+                {"$set": {str(day) : req['products']}}#write resp from bot
+            )
+            print(id.inserted_id)
             score = now['score'] + 1
             consumer = {'type': '', 'data': {}}
             meta = {}
-            token = generateJwt(now, day = day, step = step, score = score)
-            print(0)
-            return jsonify( token = token, consumer = consumer , meta = meta ) 
+            token = generateJwt(now, day = day + 1, step = step + 1, score = score)
+            response = make_response(jsonify( token = token, consumer = consumer , meta = meta ), 200)
+            response.headers['Access-Control-Allow-Origin'] = '*'
+            return response
         except KeyError:
             abort(401)
         except Exception as err:
@@ -105,7 +114,9 @@ def turn():
             consumer = {'type': '', 'data': {}}
             
             meta = {}
-            return jsonify( token = token, consumer = consumer, meta = meta) 
+            response = make_response(jsonify( token = token, consumer = consumer, meta = meta), 200) 
+            response.headers['Access-Control-Allow-Origin'] = '*'
+            return response
         except Exception as err:
             abort(err)
 
@@ -120,7 +131,9 @@ def getLeaderboard():
         '''
 
         leaderboard = {}
-        return jsonify( token = token, leaderboard = leaderboard)
+        response = make_response(jsonify( token = token, leaderboard = leaderboard), 200)
+        response.headers['Access-Control-Allow-Origin'] = '*'
+        return response
     except Exception as err:
         abort(err)
 
@@ -137,6 +150,8 @@ def getCLaster():
         '''
 
         data = []
-        return jsonify(data = data)
+        response = make_response(jsonify(data = data), 200)
+        response.headers['Access-Control-Allow-Origin'] = '*'
+        return response
     except Exception as err:
         abort(err)
