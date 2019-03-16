@@ -167,10 +167,8 @@ def items():
         size = request_json['size']
         filt = request_json['filter']
         collection = connectToDB('food', 'mods')
-        keys = list(filt.keys())
-        filt = {
-            keys[0] : { '$regex' : filt[keys[0]], '$options' : 'i'}
-        }
+        if filt['name']:
+            filt['name'] = { '$regex' : filt['name'], '$options' : 'i'}
         data = list(collection.find(filt, limit = size, skip = current))
         for i in range(len(data)):
             data[0]['_id'] = str(data[0]['_id'])
