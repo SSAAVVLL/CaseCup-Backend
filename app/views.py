@@ -1,6 +1,7 @@
 from app import app
 from flask import request, jsonify, abort, make_response
 from pymongo import MongoClient
+from bson.objectid import ObjectId
 import jwt, json, pymongo
 from random import randint
 
@@ -25,7 +26,6 @@ def generateSessionToken():
 
 def generateJwt(payload, **kwargs):
     if len(kwargs) != 0:
-        print(kwargs)
         for key in kwargs.keys():
             payload[key] = kwargs[key]
     
@@ -54,21 +54,28 @@ def start():
     try:
         username = request.get_json()['username']
         collection = connectToDB('tets', 'users')
+        data = {
+            'days' : {},
+            'leaderboard': {},
+            'token' : ''
+        }
+        session_token = str(collection.insert_one(data).inserted_id)
+        print(session_token)
         payload = {
                         'user'  : username,
                         'day'   : 0,
                         'step'  : 0,
                         'score' : 0,
-                'session_token' : generateSessionToken() 
+                'session_token' : session_token
             }
+        print(payload)
         token = generateJwt(payload)
-        data = {
-            'token': token,
-            'days' : {},
-            'leaderboard': {}
-        }
-        ids = collection.insert_one(data).inserted_id
-        print(ids)
+        print(0)
+        id = collection.update_one(
+            {'_id' : ObjectId(session_token)},
+            {'$set' : {'token' : token}}
+        )
+        print(id)
         response = make_response(jsonify(token = token), 200)
         response.headers['Access-Control-Allow-Origin'] = '*'
         return response
@@ -90,14 +97,19 @@ def turn():
             step = now["step"]
             #send to bot
             coll = connectToDB('tets', 'users')
+            value = { str(day) : req['products']}
             id = coll.update_one(
                 {"token" : token},
-                {"$set": {str(day) : req['products']}}#write resp from bot
+                 {"$set": {"days" : value}}#write resp from bot
             )
-            print(id.inserted_id)
             score = now['score'] + 1
+            id = coll.update_one(
+                {"token" : token},
+                {"$set": {"days" : value}}#write resp from bot
+            )
             consumer = {'type': '', 'data': {}}
-            meta = {}
+
+            meta = req['products']#resp from bot
             token = generateJwt(now, day = day + 1, step = step + 1, score = score)
             response = make_response(jsonify( token = token, consumer = consumer , meta = meta ), 200)
             response.headers['Access-Control-Allow-Origin'] = '*'
