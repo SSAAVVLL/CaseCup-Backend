@@ -6,13 +6,13 @@ import pandas as pd
 #матан: загружает датасет, работает с данными, строит и форматирует матрицу расстояний. 
 df = pd.read_csv('sabaton.csv',error_bad_lines=False)
 dfdr = df.drop(['coutnry'], axis=1)
-ids = df["_id"];
+ids = df["_id"]
 dfdr = dfdr.drop(['_id'], axis=1)
 data = dfdr.as_matrix()
 data_dist = pdist(data, 'euclidean')
 dist_matrix = squareform(data_dist)
 dist_matrix[0].size
-ids = df["_id"];
+ids = df["_id"]
 ids = ids.tolist()
 m_ids =[]
 for i in range(0, len(ids)):
@@ -25,7 +25,7 @@ def random_bot():
     cart = []
     
     for i in range(1,6,1):
-        p = numpy.random.randint(1,23997);
+        p = np.random.randint(1,23997)
         cart.append(m_ids[p])
     return cart
 random_bot()# образец вызова бота
@@ -51,7 +51,7 @@ def metrix(_idc, _id):
     for i in range(1,101):
         k = dists_sorted[i]
         n = dists.index(k)
-        cart.append(n);
+        cart.append(n)
     for i in _id:
         zid = m_ids.index(i)
         
