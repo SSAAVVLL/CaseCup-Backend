@@ -1,2 +1,5 @@
 from app import app
-app.run(host = '0.0.0.0', debug = True)
+try:
+    app.run(host = '0.0.0.0', debug = True)
+finally:  
+    open('flag.txt', 'w').writeline(True).close()

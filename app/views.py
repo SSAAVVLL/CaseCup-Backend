@@ -2,7 +2,8 @@ from app import app
 from flask import request, jsonify, abort, make_response
 from pymongo import MongoClient
 from bson.objectid import ObjectId
-import jwt, json, pymongo
+import jwt, json, pymongo, random
+#import straight_matrix as sm
 
 '''*****************************************************
                 Connection to MongoDB
@@ -39,6 +40,7 @@ def connectToDB(database, collection):
 @app.route('/')
 @app.route('/game')
 
+
 # Game Start
 
 @app.route('/game/start', methods = ['POST'])
@@ -54,8 +56,8 @@ def start():
         session_token = str(collection.insert_one(data).inserted_id)
         payload = {
                         'user'  : username,
-                        'day'   : 1,
-                        'step'  : 0,
+                        'day'   : 0,
+                        'step'  : -1,
                         'score' : 0,
                 'session_token' : session_token
             }
@@ -73,33 +75,20 @@ def start():
        
 
 # Game Turns
+
 @app.route('/game/turn', methods=['POST', 'GET'])
 def turn():
     if request.method == 'POST':
         try:
             request_json = request.get_json()
             token = request_json['token'] 
-            payload =  decodeJwt(token)
-
-            day = payload['day']
-
-            step = payload['step']
-
-            score = sendInfoToConsumer(request_json['products'])
-
-            consumer = {'type': '', 'data': {}}
-            value = {str(day) : {str(step) : {
-                                                'consumer': consumer
-                                             }
-            }}#resp from bot
-            
-            id = collection.update_one(
-                {'_id' : payload['session_token']},
-                {'$set': {'days' : value}}#write resp from bot
-            )
-
-
-            token = generateJwt(payload, day = day + 1, step = step + 1, score = score)
+            payload = decodeJwt(token)
+            day = payload['day']        #day
+            step = payload['step']      #step
+            score = payload['score']      
+            meta = sendInfoToConsumer(day = day, step = step, session_token = payload['session_token'], meta = request_json['products'])     #dbexchage + getting meta
+            day, step, consumer = getNewConsumer(payload['session_token'], day, step, score )
+            token = generateJwt(payload, day = day, step = step, score = meta['score'])
             response = make_response(jsonify( token = token, consumer = consumer , meta = meta ), 200)
             response.headers['Access-Control-Allow-Origin'] = '*'
             return response
@@ -111,9 +100,8 @@ def turn():
     if request.method == 'GET':
         try:
             token = request.args.get('token')
-            print(token)
             consumer = {'type': '', 'data': {}}
-            
+
             meta = {}
             response = make_response(jsonify( token = token, consumer = consumer, meta = meta), 200) 
             response.headers['Access-Control-Allow-Origin'] = '*'
@@ -121,27 +109,47 @@ def turn():
         except Exception as err:
             abort(err)
 
-def sendInfoToConsumer(meta, collection):
-    score = 0
+def sendInfoToConsumer( session_token, day = 0, step = 0, score = 0, meta = {}):
     if day != 0:
+        collection = connectToDB('tets', 'users')
+        consumer = collection.find_one({'_ids' : ObjectId(session_token)})['days'][str(day * 7 + step)]['consumer']
+        meta = test(meta)
         collection = connectToDB('food', 'data1')
-        for i in meta:
-            if meta['isBought']:
-                score += collection.find_one({'_id' : meta['id']})['price']        
-        value =  { str(day) : {str(step) : {
-                                                'result' : {
+        for item in meta:
+            if item['isBought']:
+                score += collection.find_one({'_id' : ObjectId(item['id'])})['price']        
+        value =  { str(step + day * 7) :  {
+                                        'result' : {
                                                                 'score' : score, 
                                                                 'meta' : meta
                                                             }
-        }}}
-
-        id = collection.update_one(
-            {'_id' : payload['session_token']},
+        }}
+        collection.update_one(
+            {'_id' : ObjectId(session_token)},
             {'$set': {'days' : value}}
         )
-    return score
+    return { 'score' : score, 'meta' : meta }
 
-
+def getNewConsumer(session_token, day = 0, step = 0, score = 0):
+    step = (step + 1) % 8
+    if step == 0:
+        step += 1
+        day += 1
+    consumer = testGetConsumer()
+    print(consumer['item'])
+    consumer['item'][0]['_id'] = str(consumer['item'][0]['_id'])
+    value = { str(step + day * 7) : {
+                                        'consumer': consumer
+                                    }
+    }
+    collection = connectToDB('tets', 'users')
+    id = collection.update_one(
+        {'_id' : ObjectId(session_token)},
+        {'$set': {'days' : value}}#write resp from bot
+    )
+    print(consumer)
+    return [day, step, consumer]
+    
 @app.route('/game/score', methods = ['POST'])
 def score():
     try:
@@ -167,11 +175,11 @@ def items():
         size = request_json['size']
         filt = request_json['filter']
         collection = connectToDB('food', 'mods')
-        if filt['name']:
+        if 'name' in filt:
             filt['name'] = { '$regex' : filt['name'], '$options' : 'i'}
-        data = list(collection.find(filt, limit = size, skip = current))
+        data = list(collection.find(filt, limit = size, skip = current).sort('name'))
         for i in range(len(data)):
-            data[0]['_id'] = str(data[0]['_id'])
+            data[i]['_id'] = str(data[i]['_id'])
         meta = { 'searched' : collection.count_documents(filt) }
         response = make_response(jsonify(data = data, meta = meta), 200)
         response.headers['Access-Control-Allow-Origin'] = '*'
@@ -183,5 +191,10 @@ def items():
                     Help Code
 *****************************************************'''
 
-def test(products):
-    pass
+def test(data):
+    for item in data:
+        item['isBought'] = random.choice([True, False])
+    return data
+def testGetConsumer():
+    collection = connectToDB('food', 'mods')
+    return {'type': '', 'item': list(collection.aggregate([{'$sample' : { 'size' : 1}}]))}
