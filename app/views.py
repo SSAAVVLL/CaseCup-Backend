@@ -3,22 +3,14 @@ from flask import request, jsonify, abort, make_response
 from pymongo import MongoClient
 from bson.objectid import ObjectId
 import jwt, json, pymongo
-from random import randint
 
 '''*****************************************************
                 Connection to MongoDB
 *****************************************************'''
 
-host = "localhost"
+host = 'localhost'
 port = 27017
 client = MongoClient(host, port)
-
-'''*****************************************************
-Generates constant session token for user identification
-*****************************************************'''
-
-def generateSessionToken():
-    return ''.join([ chr(randint(65,90)) for i in range(randint(3,10))])
 
 '''*****************************************************
                 Generates JWT
@@ -29,10 +21,10 @@ def generateJwt(payload, **kwargs):
         for key in kwargs.keys():
             payload[key] = kwargs[key]
     
-    return jwt.encode(payload, "GameSession", algorithm = 'HS256').decode('utf-8')
+    return jwt.encode(payload, 'GameSession', algorithm = 'HS256').decode('utf-8')
 
 def decodeJwt(jwToken):
-    return jwt.decode(jwToken, "GameSession", algorithm = 'HS256')
+    return jwt.decode(jwToken, 'GameSession', algorithm = 'HS256')
     
 '''*****************************************************
                 Access to MongoDB
@@ -60,22 +52,18 @@ def start():
             'token' : ''
         }
         session_token = str(collection.insert_one(data).inserted_id)
-        print(session_token)
         payload = {
                         'user'  : username,
-                        'day'   : 0,
+                        'day'   : 1,
                         'step'  : 0,
                         'score' : 0,
                 'session_token' : session_token
             }
-        print(payload)
         token = generateJwt(payload)
-        print(0)
         id = collection.update_one(
             {'_id' : ObjectId(session_token)},
             {'$set' : {'token' : token}}
         )
-        print(id)
         response = make_response(jsonify(token = token), 200)
         response.headers['Access-Control-Allow-Origin'] = '*'
         return response
@@ -87,30 +75,31 @@ def start():
 # Game Turns
 @app.route('/game/turn', methods=['POST', 'GET'])
 def turn():
-
     if request.method == 'POST':
         try:
-            req = request.get_json()
-            token = req['token'] 
-            now =  decodeJwt(token)
-            day = now["day"]
-            step = now["step"]
-            #send to bot
-            coll = connectToDB('tets', 'users')
-            value = { str(day) : req['products']}
-            id = coll.update_one(
-                {"token" : token},
-                 {"$set": {"days" : value}}#write resp from bot
-            )
-            score = now['score'] + 1
-            id = coll.update_one(
-                {"token" : token},
-                {"$set": {"days" : value}}#write resp from bot
-            )
-            consumer = {'type': '', 'data': {}}
+            request_json = request.get_json()
+            token = request_json['token'] 
+            payload =  decodeJwt(token)
 
-            meta = req['products']#resp from bot
-            token = generateJwt(now, day = day + 1, step = step + 1, score = score)
+            day = payload['day']
+
+            step = payload['step']
+
+            score = sendInfoToConsumer(request_json['products'])
+
+            consumer = {'type': '', 'data': {}}
+            value = {str(day) : {str(step) : {
+                                                'consumer': consumer
+                                             }
+            }}#resp from bot
+            
+            id = collection.update_one(
+                {'_id' : payload['session_token']},
+                {'$set': {'days' : value}}#write resp from bot
+            )
+
+
+            token = generateJwt(payload, day = day + 1, step = step + 1, score = score)
             response = make_response(jsonify( token = token, consumer = consumer , meta = meta ), 200)
             response.headers['Access-Control-Allow-Origin'] = '*'
             return response
@@ -121,7 +110,7 @@ def turn():
 
     if request.method == 'GET':
         try:
-            token = request.args.get("token")
+            token = request.args.get('token')
             print(token)
             consumer = {'type': '', 'data': {}}
             
@@ -132,8 +121,29 @@ def turn():
         except Exception as err:
             abort(err)
 
+def sendInfoToConsumer(meta, collection):
+    score = 0
+    if day != 0:
+        collection = connectToDB('food', 'data1')
+        for i in meta:
+            if meta['isBought']:
+                score += collection.find_one({'_id' : meta['id']})['price']        
+        value =  { str(day) : {str(step) : {
+                                                'result' : {
+                                                                'score' : score, 
+                                                                'meta' : meta
+                                                            }
+        }}}
+
+        id = collection.update_one(
+            {'_id' : payload['session_token']},
+            {'$set': {'days' : value}}
+        )
+    return score
+
+
 @app.route('/game/score', methods = ['POST'])
-def getLeaderboard():
+def score():
     try:
         token = request.get_json()['token'] 
         day = request.get_json()['day']
@@ -150,20 +160,30 @@ def getLeaderboard():
         abort(err)
 
 @app.route('/items' , methods = ['POST'])
-def getCLaster():
+def items():
     try:
-        req = request.get_json()
-        current = req['current']
-        size = req['size']
-        filt = req['filter']
-        
-        '''
-        запрос к бд
-        '''
-
-        data = []
-        response = make_response(jsonify(data = data), 200)
+        request_json = request.get_json()
+        current = request_json['current']
+        size = request_json['size']
+        filt = request_json['filter']
+        collection = connectToDB('food', 'mods')
+        keys = list(filt.keys())
+        filt = {
+            keys[0] : { '$regex' : filt[keys[0]], '$options' : 'i'}
+        }
+        data = list(collection.find(filt, limit = size, skip = current))
+        for i in range(len(data)):
+            data[0]['_id'] = str(data[0]['_id'])
+        meta = { 'searched' : collection.count_documents(filt) }
+        response = make_response(jsonify(data = data, meta = meta), 200)
         response.headers['Access-Control-Allow-Origin'] = '*'
         return response
     except Exception as err:
         abort(err)
+
+'''*****************************************************
+                    Help Code
+*****************************************************'''
+
+def test(products):
+    pass
