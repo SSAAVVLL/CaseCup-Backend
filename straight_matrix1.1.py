@@ -1,10 +1,9 @@
-#инициализации
+#инициализации загружают необходимые для работы библиотеки
 import numpy as np
 from scipy.spatial.distance import pdist, squareform
-import numpy
 import random
 import pandas as pd
-#матан
+#матан: загружает датасет, работает с данными, строит и форматирует матрицу расстояний. 
 df = pd.read_csv('sabaton.csv',error_bad_lines=False)
 dfdr = df.drop(['coutnry'], axis=1)
 ids = df["_id"];
@@ -15,14 +14,13 @@ dist_matrix = squareform(data_dist)
 dist_matrix[0].size
 ids = df["_id"];
 ids = ids.tolist()
-#пожилой преобразователь
 m_ids =[]
 for i in range(0, len(ids)):
     v = ids[i].split('(')[1]
     v = v.split(')')[0]
     v = v.split('"')[1]
     m_ids.append(v)
-#рандомный бот
+#рандомный бот: не принимает ничего на вход(ему и не надо), генерирует массив из 5 id предложенных товаров
 def random_bot():
     cart = []
     
@@ -30,8 +28,8 @@ def random_bot():
         p = numpy.random.randint(1,23997);
         cart.append(m_ids[p])
     return cart
-random_bot()
-#матричный бот
+random_bot()# образец вызова бота
+#матричный бот принимает на вход id первой покупки, по ней строит список из 5 id предложенных товаров
 def matrix_bot(_id):
     cart = []
     j = m_ids.index(_id)
@@ -42,8 +40,8 @@ def matrix_bot(_id):
         n = (dists==k).argmax()
         cart.append(m_ids[n])
     return cart
-matrix_bot("5c825dd82dcf3568a17d27b2")
-#метрика
+matrix_bot("5c825dd82dcf3568a17d27b2")# образец вызова бота
+#метрика принимает на вход id первой покупки, и массив предложенных товаров. Выдает объект, содержащий ID и значения True/False
 def metrix(_idc, _id):
     cart = []
     cart_final = {}
@@ -65,4 +63,4 @@ def metrix(_idc, _id):
         else: 
             cart_final[i] = False
     return cart_final
-metrix("5c825dd82dcf3568a17d27b1", matrix_bot("5c825dd82dcf3568a17d27b1"))
+metrix("5c825dd82dcf3568a17d27b1", matrix_bot("5c825dd82dcf3568a17d27b1"))# образец вызова метрики.
