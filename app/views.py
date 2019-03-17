@@ -3,7 +3,7 @@ from flask import request, jsonify, abort, make_response
 from pymongo import MongoClient
 from bson.objectid import ObjectId
 import jwt, json, pymongo, random
-#import straight_matrix as sm
+from straight_matrix import *
 
 '''*****************************************************
                 Connection to MongoDB
@@ -14,7 +14,13 @@ port = 27017
 client = MongoClient(host, port)
 
 '''*****************************************************
-                Generates JWT
+                    Matrix for Bots
+*****************************************************'''
+
+m_ids = init_ids()
+dist_matrix = init_mat()
+'''*****************************************************
+                    Generates JWT
 *****************************************************'''
 
 def generateJwt(payload, **kwargs):
@@ -28,14 +34,14 @@ def decodeJwt(jwToken):
     return jwt.decode(jwToken, 'GameSession', algorithm = 'HS256')
     
 '''*****************************************************
-                Access to MongoDB
+                    Access to MongoDB
 *****************************************************'''
 
 def connectToDB(database, collection):
     return client[database][collection]
 
 '''*****************************************************
-                    Main Code
+                      Main Code
 *****************************************************'''
 @app.route('/')
 @app.route('/game')
@@ -81,17 +87,22 @@ def turn():
     if request.method == 'POST':
         try:
             request_json = request.get_json()
+
             token = request_json['token'] 
             payload = decodeJwt(token)
             day = payload['day']        #day
             step = payload['step']      #step
-            score = payload['score']   
-            session_token = payload['session_token']
-            meta = sendInfoToConsumer(day = day, step = step, session_token = session_token, meta = request_json['products'])     #dbexchage + getting meta
+            score = payload['score']   #score
+            session_token = payload['session_token'] #token
+
+            meta = sendInfoToConsumer(user = payload['user'], day = day, step = step, session_token = session_token, meta = request_json['products']) #dbexchage + getting meta
+            score = score + meta['score']
+
             day, step, consumer = getNewConsumer(session_token, day, step, score )
-            token = generateJwt(payload, day = day, step = step, score = meta['score'])
+
+            token = generateJwt(payload, day = day, step = step, score = score)
             collection = connectToDB('tets', 'users')
-            id = collection.update_one(
+            collection.update_one(
             {'_id' : ObjectId(session_token)},
             {'$set' : {'token' : token}}
             )
@@ -112,10 +123,8 @@ def turn():
             user = collection.find_one({'_id' : ObjectId(payload['session_token'])})
             for item in user['days']:
                 if item['step'] == (payload['day'] * 7 + payload['step']):
-                    print(item)
                     if 'consumer' in item:
                         consumer = item['consumer'] 
-                        print(consumer)
             meta = user['days']
             response = make_response(jsonify( token = token, consumer = consumer, meta = meta), 200) 
             response.headers['Access-Control-Allow-Origin'] = '*'
@@ -123,13 +132,17 @@ def turn():
         except Exception as err:
             abort(err)
 
-def sendInfoToConsumer( session_token, day = 0, step = 0, score = 0, meta = {}):
+def sendInfoToConsumer( session_token, user, day = 0, step = 0, score = 0, meta = {}):
     if day != 0:
         collection = connectToDB('tets', 'users')
         consumer = collection.find_one({'_id' : ObjectId(session_token)}) 
-        consumer = consumer['days']
-        meta = test(meta)
-        print(meta)
+        for item in consumer['days']:
+            if item['step'] == (day * 7 + step):
+                if 'consumer' in item:
+                    consumer = item['consumer']['item'][0]['_id']
+                    break 
+        #botsRequest((step + day * 7), consumer, user, session_token)
+        meta = metrix(consumer, meta, m_ids, dist_matrix)
         collection = connectToDB('food', 'data1')
         for item in meta:
             if item['isBought']:
@@ -164,22 +177,35 @@ def getNewConsumer(session_token, day = 0, step = 0, score = 0):
     )
     return [day, step, consumer]
     
-@app.route('/game/score', methods = ['POST'])
+def botsRequest(step, consumer, username, session_token):
+    leaderboard = {
+        'step' : step,
+        'scores' : {
+            username : score,
+            'Oleg_1' : random_bot(m_ids),
+            'Oleg_2' : matrix_bot(consumer, m_ids, dist_matrix),
+            'Oleg_3' : random_bot(m_ids)
+            }
+    }
+    collection = connectToDB('tets', 'users')
+    collection.update_one(
+        {'_id' : ObjectId(session_token)},
+        {'$push' : {'leaderboard' : leaderboard}}
+    )
+    
+@app.route('/game/score', methods = ['GET'])
 def score():
     try:
         token = request.get_json()['token'] 
         day = request.get_json()['day']
-
-        '''
-        запрос к бд
-        '''
-
         leaderboard = {}
         response = make_response(jsonify( token = token, leaderboard = leaderboard), 200)
         response.headers['Access-Control-Allow-Origin'] = '*'
         return response
     except Exception as err:
         abort(err)
+
+@app.route('/game/history', methods = ['GET'])
 
 @app.route('/items' , methods = ['POST'])
 def items():
@@ -205,10 +231,16 @@ def items():
                     Help Code
 *****************************************************'''
 
-def test(data):
+def testSend(data):
     for item in data:
         item['isBought'] = random.choice([True, False])
     return data
 def testGetConsumer():
     collection = connectToDB('food', 'mods')
     return {'type': '', 'item': list(collection.aggregate([{'$sample' : { 'size' : 1}}]))}
+
+def testGenerateScore(score):
+    bot_score = random.randint(0, score + score // 2)
+    if bot_score < 0:
+        bot_score = 0
+    return bot_score
