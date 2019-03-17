@@ -49,8 +49,8 @@ def start():
         username = request.get_json()['username']
         collection = connectToDB('tets', 'users')
         data = {
-            'days' : {},
-            'leaderboard': {},
+            'days' : [],
+            'leaderboard': [],
             'token' : ''
         }
         session_token = str(collection.insert_one(data).inserted_id)
@@ -106,9 +106,17 @@ def turn():
     if request.method == 'GET':
         try:
             token = request.args.get('token')
-            consumer = {'type': '', 'data': {}}
+            payload = decodeJwt(token)
+            collection = connectToDB('tets', 'users')
 
-            meta = {}
+            user = collection.find_one({'_id' : ObjectId(payload['session_token'])})
+            for item in user['days']:
+                if item['step'] == (payload['day'] * 7 + payload['step']):
+                    print(item)
+                    if 'consumer' in item:
+                        consumer = item['consumer'] 
+                        print(consumer)
+            meta = user['days']
             response = make_response(jsonify( token = token, consumer = consumer, meta = meta), 200) 
             response.headers['Access-Control-Allow-Origin'] = '*'
             return response
@@ -119,22 +127,23 @@ def sendInfoToConsumer( session_token, day = 0, step = 0, score = 0, meta = {}):
     if day != 0:
         collection = connectToDB('tets', 'users')
         consumer = collection.find_one({'_id' : ObjectId(session_token)}) 
-        consumer = consumer['days'][str(step + 7 * day)]['consumer']
+        consumer = consumer['days']
         meta = test(meta)
         print(meta)
         collection = connectToDB('food', 'data1')
         for item in meta:
             if item['isBought']:
                 score += collection.find_one({'_id' : ObjectId(item['_id'])})['price']        
-        value =  { str(step + day * 7) :  {
-                                        'result' : {
-                                                                'score' : score, 
-                                                                'meta' : meta
-                                                            }
-        }}
-        collection.update_one(
+        value =  { 'step' : step + day * 7, 
+                 'result' : {
+                                        'score' : score, 
+                                        'meta' : meta
+                                    }
+                }
+        сollection = connectToDB('tets', 'users')
+        сollection.update_one(
             {'_id' : ObjectId(session_token)},
-            {'$set': {'days' : value}}
+            {'$push': {'days' : value}}
         )
     return { 'score' : score, 'meta' : meta }
 
@@ -145,14 +154,13 @@ def getNewConsumer(session_token, day = 0, step = 0, score = 0):
         day += 1
     consumer = testGetConsumer()
     consumer['item'][0]['_id'] = str(consumer['item'][0]['_id'])
-    value = { str(step + day * 7) : {
-                                        'consumer': consumer
-                                    }
-    }
+    value = {  'step' : step + day * 7,
+            'consumer': consumer
+            }
     collection = connectToDB('tets', 'users')
     id = collection.update_one(
         {'_id' : ObjectId(session_token)},
-        {'$set': {'days' : value}}#write resp from bot
+        {'$push': {'days' : value}}#write resp from bot
     )
     return [day, step, consumer]
     
