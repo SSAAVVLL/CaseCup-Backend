@@ -85,10 +85,16 @@ def turn():
             payload = decodeJwt(token)
             day = payload['day']        #day
             step = payload['step']      #step
-            score = payload['score']      
-            meta = sendInfoToConsumer(day = day, step = step, session_token = payload['session_token'], meta = request_json['products'])     #dbexchage + getting meta
-            day, step, consumer = getNewConsumer(payload['session_token'], day, step, score )
+            score = payload['score']   
+            session_token = payload['session_token']
+            meta = sendInfoToConsumer(day = day, step = step, session_token = session_token, meta = request_json['products'])     #dbexchage + getting meta
+            day, step, consumer = getNewConsumer(session_token, day, step, score )
             token = generateJwt(payload, day = day, step = step, score = meta['score'])
+            collection = connectToDB('tets', 'users')
+            id = collection.update_one(
+            {'_id' : ObjectId(session_token)},
+            {'$set' : {'token' : token}}
+            )
             response = make_response(jsonify( token = token, consumer = consumer , meta = meta ), 200)
             response.headers['Access-Control-Allow-Origin'] = '*'
             return response
@@ -112,12 +118,14 @@ def turn():
 def sendInfoToConsumer( session_token, day = 0, step = 0, score = 0, meta = {}):
     if day != 0:
         collection = connectToDB('tets', 'users')
-        consumer = collection.find_one({'_ids' : ObjectId(session_token)})['days'][str(day * 7 + step)]['consumer']
+        consumer = collection.find_one({'_id' : ObjectId(session_token)}) 
+        consumer = consumer['days'][str(step + 7 * day)]['consumer']
         meta = test(meta)
+        print(meta)
         collection = connectToDB('food', 'data1')
         for item in meta:
             if item['isBought']:
-                score += collection.find_one({'_id' : ObjectId(item['id'])})['price']        
+                score += collection.find_one({'_id' : ObjectId(item['_id'])})['price']        
         value =  { str(step + day * 7) :  {
                                         'result' : {
                                                                 'score' : score, 
@@ -136,7 +144,6 @@ def getNewConsumer(session_token, day = 0, step = 0, score = 0):
         step += 1
         day += 1
     consumer = testGetConsumer()
-    print(consumer['item'])
     consumer['item'][0]['_id'] = str(consumer['item'][0]['_id'])
     value = { str(step + day * 7) : {
                                         'consumer': consumer
@@ -147,7 +154,6 @@ def getNewConsumer(session_token, day = 0, step = 0, score = 0):
         {'_id' : ObjectId(session_token)},
         {'$set': {'days' : value}}#write resp from bot
     )
-    print(consumer)
     return [day, step, consumer]
     
 @app.route('/game/score', methods = ['POST'])
