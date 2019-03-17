@@ -3,22 +3,28 @@ from scipy.spatial.distance import pdist, squareform
 import random
 import pandas as pd
 #матан: загружает датасет, работает с данными, строит и форматирует матрицу расстояний. 
-df = pd.read_csv('sabaton.csv',error_bad_lines=False)
-dfdr = df.drop(['coutnry'], axis=1)
-ids = df["_id"];
-dfdr = dfdr.drop(['_id'], axis=1)
-data = dfdr.as_matrix()
-data_dist = pdist(data, 'euclidean')
-dist_matrix = squareform(data_dist)
-dist_matrix[0].size
-ids = df["_id"];
-ids = ids.tolist()
-m_ids =[]
-for i in range(0, len(ids)):
-    v = ids[i].split('(')[1]
-    v = v.split(')')[0]
-    v = v.split('"')[1]
-    m_ids.append(v)
+def init_mat():
+    df = pd.read_csv('sabaton.csv',error_bad_lines=False)
+    dfdr = df.drop(['coutnry'], axis=1)
+    dfdr = dfdr.drop(['_id'], axis=1)
+    data = dfdr.as_matrix()
+    data_dist = pdist(data, 'euclidean')
+    dist_matrix = squareform(data_dist)
+    return dist_matrix
+def init_ids():
+    df = pd.read_csv('sabaton.csv',error_bad_lines=False)
+    dfdr = df.drop(['coutnry'], axis=1)
+    ids = df["_id"];
+    ids = ids.tolist()
+    m_ids =[]
+    for i in range(0, len(ids)):
+        v = ids[i].split('(')[1]
+        v = v.split(')')[0]
+        v = v.split('"')[1]
+        m_ids.append(v)
+    return m_ids
+dist_matrix = init_mat()
+m_ids = init_ids()
 def reformatTo(data):
     return data.values()
 def reformatFrom(data):
@@ -42,11 +48,11 @@ random_bot()# образец вызова бота
 def matrix_bot(_id):
     cart = []
     j = m_ids.index(_id)
-    dists = dist_matrix[j]
-    dists_sorted = dists.sort()
+    dists = dist_matrix[j].tolist()
+    dists_sorted = sorted(dists)
     for i in range(1,6):
         k = dists_sorted[i+1]
-        n = (dists==k).argmax()
+        n = dists.index(k)
         cart.append(m_ids[n])
     return cart
 matrix_bot("5c825dd82dcf3568a17d27b2")# образец вызова бота
@@ -56,7 +62,7 @@ def metrix(_idc, _id):
     cart_final = {}
     j = m_ids.index(_idc)
     dists = dist_matrix[j].tolist()
-    dists_sorted = dists.sort()
+    dists_sorted = sorted(dists)
     for i in range(1,101):
         k = dists_sorted[i]
         n = dists.index(k)
