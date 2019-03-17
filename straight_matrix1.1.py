@@ -34,7 +34,7 @@ def random_bot():
     cart = []
     
     for i in range(1,6,1):
-        p = numpy.random.randint(1,23997);
+        p = random.randint(1,23997);
         cart.append(m_ids[p])
     return cart
 random_bot()# образец вызова бота
