@@ -19,6 +19,16 @@ for i in range(0, len(ids)):
     v = v.split(')')[0]
     v = v.split('"')[1]
     m_ids.append(v)
+def reformatTo(data):
+    return data.values()
+def reformatFrom(data):
+    new_type = []
+    for name in data.keys():
+        new_data = {}
+        new_data['_id'] = name
+        new_data['isBought'] = data[name]  
+        new_type.append(new_data)
+    return new_type
 #рандомный бот: не принимает ничего на вход(ему и не надо), генерирует массив из 5 id предложенных товаров
 def random_bot():
     cart = []
