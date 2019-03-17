@@ -1,5 +1,4 @@
 #инициализации загружают необходимые для работы библиотеки
-import numpy as np
 from scipy.spatial.distance import pdist, squareform
 import random
 import pandas as pd
@@ -34,7 +33,7 @@ def matrix_bot(_id):
     cart = []
     j = m_ids.index(_id)
     dists = dist_matrix[j]
-    dists_sorted = np.sort(dists)[::1]
+    dists_sorted = dists.sort()
     for i in range(1,6):
         k = dists_sorted[i+1]
         n = (dists==k).argmax()
@@ -47,7 +46,7 @@ def metrix(_idc, _id):
     cart_final = {}
     j = m_ids.index(_idc)
     dists = dist_matrix[j].tolist()
-    dists_sorted = np.sort(dists)[::1]
+    dists_sorted = dists.sort()
     for i in range(1,101):
         k = dists_sorted[i]
         n = dists.index(k)
@@ -56,7 +55,7 @@ def metrix(_idc, _id):
         zid = m_ids.index(i)
         
         if zid in cart:
-            if cart.index(zid) < np.random.randint(0,100):
+            if cart.index(zid) < random.randint(0,100):
                 cart_final[i] = True
             else: 
                 cart_final[i] = False
