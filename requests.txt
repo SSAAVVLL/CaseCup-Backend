@@ -5,3 +5,5 @@ requests.post('http://localhost:5000/game/turn', json = { 'token' : 'eyJ0eXAiOiJ
 requests.post('http://localhost:5000/game/turn', json = { 'token' : 'eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJ1c2VyIjoia2VrIiwiZGF5IjowLCJzdGVwIjotMSwic2NvcmUiOjAsInNlc3Npb25fdG9rZW4iOiI1YzhmMmQwMDc3ZTRiZjEzZmM1ZTYzZDEifQ.n_WZCpd1QI4diCvkz8Sp_HEC4WmzHhJcWOPhjqLrll8', 'products' : []})
 
 requests.get('http://localhost:5000/game/turn', params = {'token' : 'eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJ1c2VyIjoia2VrIiwiZGF5IjoxLCJzdGVwIjoxLCJzY29yZSI6MCwic2Vzc2lvbl90b2tlbiI6IjVjOGRlOGZhNzdlNGJmNTA0NDY2MzZjOSJ9.HJta9cJWJmN0OyS6HgHYiKA0e-TtZKNJchhGwf5nFHI'})
+
+requests.get('http://localhost:5000/game/score', params = {'token' : 'eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJ1c2VyIjoia2VrIiwiZGF5IjoxLCJzdGVwIjozLCJzY29yZSI6MCwic2Vzc2lvbl90b2tlbiI6IjVjOGYyZDAwNzdlNGJmMTNmYzVlNjNkMSJ9.sdx_VoOvFbUvtOQu_0HP5cxMt-fLWG9KX78X6g8QAgk', 'day' : 0})

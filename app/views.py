@@ -47,7 +47,7 @@ def connectToDB(database, collection):
 @app.route('/game')
 
 
-# Game Start
+
 
 @app.route('/game/start', methods = ['POST'])
 def start():
@@ -80,7 +80,7 @@ def start():
         abort(err)
        
 
-# Game Turns
+
 
 @app.route('/game/turn', methods=['POST', 'GET'])
 def turn():
@@ -90,12 +90,12 @@ def turn():
 
             token = request_json['token'] 
             payload = decodeJwt(token)
-            day = payload['day']        #day
-            step = payload['step']      #step
-            score = payload['score']   #score
-            session_token = payload['session_token'] #token
+            day = payload['day']        
+            step = payload['step']      
+            score = payload['score']   
+            session_token = payload['session_token'] 
 
-            meta = sendInfoToConsumer(user = payload['user'], day = day, step = step, session_token = session_token, meta = request_json['products']) #dbexchage + getting meta
+            meta = sendInfoToConsumer(user = payload['user'], day = day, step = step, session_token = session_token, meta = request_json['products']) 
             score = score + meta['score']
 
             day, step, consumer = getNewConsumer(session_token, day, step, score )
@@ -141,7 +141,7 @@ def sendInfoToConsumer( session_token, user, day = 0, step = 0, score = 0, meta 
                 if 'consumer' in item:
                     consumer = item['consumer']['item'][0]['_id']
                     break   
-        meta, score = getResult(consumer, reformatTo(meta))
+        meta, score = getResult(consumer, reformatTo(meta)) #meta
         botsRequest((step + day * 7), consumer, user, session_token, score)
         value =  { 'step' : step + day * 7, 
                  'result' : {
@@ -167,7 +167,7 @@ def getNewConsumer(session_token, day = 0, step = 0, score = 0):
             'consumer': consumer
             }
     collection = connectToDB('tets', 'users')
-    id = collection.update_one(
+    collection.update_one(
         {'_id' : ObjectId(session_token)},
         {'$push': {'days' : value}}#write resp from bot
     )
@@ -180,9 +180,9 @@ def botsRequest(step, consumer, username, session_token, score):
         'step' : step,
         'scores' : {
             username : score,
-            'Oleg_1' : getResult(consumer,random_bot(m_ids))[1],
-            'Oleg_2' : getResult(consumer, matrix_bot(consumer, m_ids, dist_matrix))[1],
-            'Oleg_3' : getResult(consumer,random_bot(m_ids))[1]
+            'Oleg_1' : getResult(consumer,random_bot(m_ids))[1], #testGenerateScore(score),
+            'Oleg_2' : getResult(consumer, matrix_bot(consumer, m_ids, dist_matrix))[1],  #testGenerateScore(score),
+            'Oleg_3' : getResult(consumer,random_bot(m_ids))[1]  #testGenerateScore(score)
             }
     }
     collection = connectToDB('tets', 'users')
@@ -196,6 +196,7 @@ def getResult(consumer, meta):
     global dist_matrix
     score = 0
     meta = metrix(consumer, meta, m_ids, dist_matrix)
+    #meta = testSend(meta)
     collection = connectToDB('food', 'data1')
     for item in meta:
         if item['isBought']:
@@ -205,9 +206,12 @@ def getResult(consumer, meta):
 @app.route('/game/score', methods = ['GET'])
 def score():
     try:
-        token = request.get_json()['token'] 
-        day = request.get_json()['day']
-        leaderboard = {}
+
+        token = request.args.get('token') 
+        payload = decodeJwt(token)
+        collection = connectToDB('tets', 'users')
+        leaderboard = collection.find_one({'_id' : ObjectId(payload['session_token'])})
+        leaderboard = leaderboard['leaderboard'][-1]
         response = make_response(jsonify( token = token, leaderboard = leaderboard), 200)
         response.headers['Access-Control-Allow-Origin'] = '*'
         return response
@@ -227,6 +231,8 @@ def items():
         if 'name' in filt:
             filt['name'] = { '$regex' : filt['name'], '$options' : 'i'}
         data = list(collection.find(filt, limit = size, skip = current).sort('name'))
+        for item in data:
+            data
         for i in range(len(data)):
             data[i]['_id'] = str(data[i]['_id'])
         meta = { 'searched' : collection.count_documents(filt) }
