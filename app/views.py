@@ -229,7 +229,7 @@ def sum_score(leaderboard):
 
 @app.route('/game/history', methods = ['GET'])
 
-@app.route('/items/category' , methods = ['POST'])
+@app.route('/items' , methods = ['POST'])
 def items():
     try:
         request_json = request.get_json()
@@ -241,12 +241,9 @@ def items():
         if 'name' in filt:
             filt['name'] = { '$regex' : filt['name'], '$options' : 'i'}
         data = list(collection.find(filt, limit = size, skip = current).sort('name'))
-        searched = collection.count_documents(filt)
-        for item in data:
-            data += list(collection.find())
         for i in range(len(data)):   
             data[i]['_id'] = str(data[i]['_id'])
-        meta = { 'searched' :  }
+        meta = { 'searched' : collection.count_documents(filt) }
         response = make_response(jsonify(data = data, meta = meta), 200)
         response.headers['Access-Control-Allow-Origin'] = '*'
         return response
