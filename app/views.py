@@ -3,7 +3,7 @@ from flask import request, jsonify, abort, make_response
 from pymongo import MongoClient
 from bson.objectid import ObjectId
 import jwt, json, pymongo, random
-#from straight_matrix import *
+from straight_matrix import *
 
 '''*****************************************************
                 Connection to MongoDB
@@ -17,8 +17,8 @@ client = MongoClient(host, port)
                     Matrix for Bots
 *****************************************************'''
 
-#m_ids = init_ids()
-#dist_matrix = init_mat()
+m_ids = init_ids()
+dist_matrix = init_mat()
 '''*****************************************************
                     Generates JWT
 *****************************************************'''
@@ -141,7 +141,7 @@ def sendInfoToConsumer( session_token, user, day = 0, step = 0, score = 0, meta 
                 if 'consumer' in item:
                     consumer = item['consumer']['item'][0]['_id']
                     break   
-        meta, score = getResult(consumer, meta)#reformatTo(meta))
+        meta, score = getResult(consumer, reformatTo(meta))#meta
         botsRequest((step + day * 7), consumer, user, session_token, score)
         value =  { 'step' : step + day * 7, 
                  'result' : {
@@ -180,9 +180,9 @@ def botsRequest(step, consumer, username, session_token, score):
         'step' : step,
         'scores' : {
             username : score,
-            'Oleg_1' : getResult(consumer, testGenerateScore(score)),#random_bot(m_ids))[1], 
-            'Oleg_2' : getResult(consumer, testGenerateScore(score)),#matrix_bot(consumer, m_ids, dist_matrix))[1],  
-            'Oleg_3' : getResult(consumer, testGenerateScore(score))#random_bot(m_ids))[1]              
+            'Oleg_1' : getResult(consumer, random_bot(m_ids))[1],  #testGenerateScore(),
+            'Oleg_2' : getResult(consumer, matrix_bot(consumer, m_ids, dist_matrix))[1],  #testGenerateScore(),
+            'Oleg_3' : getResult(consumer, random_bot(m_ids))[1]   #testGenerateScore(),
             }
     }
     collection = connectToDB('tets', 'users')
@@ -195,8 +195,8 @@ def getResult(consumer, meta):
     global m_ids
     global dist_matrix
     score = 0
-    #meta = metrix(consumer, meta, m_ids, dist_matrix)
-    meta = testSend(meta)
+    meta = metrix(consumer, meta, m_ids, dist_matrix)
+    #meta = testSend(meta)
     collection = connectToDB('food', 'data1')
     for item in meta:
         if item['isBought']:
