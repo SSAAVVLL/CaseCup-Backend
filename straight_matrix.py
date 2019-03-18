@@ -63,13 +63,12 @@ def matrix_bot(_id, m_ids, dist_matrix):
         n = dists.index(k)
         cart.append(m_ids[n])
     return cart
-#atrix_bot("5c825dd82dcf3568a17d27b2") образец вызова бота
+#matrix_bot("5c825dd82dcf3568a17d27b2") образец вызова бота
 #метрика принимает на вход id первой покупки, и массив предложенных товаров. Выдает объект, содержащий ID и значения True/False
 def metrix(_idc, _id, m_ids, dist_matrix):
     cart = []
     cart_final = {}
     j = m_ids.index(_idc)
-    _id = reformatTo(_id)
     dists = dist_matrix[j].tolist()
     dists_sorted = sorted(dists)
     for i in range(1,101):

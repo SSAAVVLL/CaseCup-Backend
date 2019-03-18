@@ -140,13 +140,9 @@ def sendInfoToConsumer( session_token, user, day = 0, step = 0, score = 0, meta 
             if item['step'] == (day * 7 + step):
                 if 'consumer' in item:
                     consumer = item['consumer']['item'][0]['_id']
-                    break 
-        #botsRequest((step + day * 7), consumer, user, session_token)
-        meta = metrix(consumer, meta, m_ids, dist_matrix)
-        collection = connectToDB('food', 'data1')
-        for item in meta:
-            if item['isBought']:
-                score += collection.find_one({'_id' : ObjectId(item['_id'])})['price']        
+                    break   
+        meta, score = getResult(consumer, reformatTo(meta))
+        botsRequest((step + day * 7), consumer, user, session_token, score)
         value =  { 'step' : step + day * 7, 
                  'result' : {
                                         'score' : score, 
@@ -177,14 +173,16 @@ def getNewConsumer(session_token, day = 0, step = 0, score = 0):
     )
     return [day, step, consumer]
     
-def botsRequest(step, consumer, username, session_token):
+def botsRequest(step, consumer, username, session_token, score):
+    global m_ids
+    global dist_matrix
     leaderboard = {
         'step' : step,
         'scores' : {
             username : score,
-            'Oleg_1' : random_bot(m_ids),
-            'Oleg_2' : matrix_bot(consumer, m_ids, dist_matrix),
-            'Oleg_3' : random_bot(m_ids)
+            'Oleg_1' : getResult(consumer,random_bot(m_ids))[1],
+            'Oleg_2' : getResult(consumer, matrix_bot(consumer, m_ids, dist_matrix))[1],
+            'Oleg_3' : getResult(consumer,random_bot(m_ids))[1]
             }
     }
     collection = connectToDB('tets', 'users')
@@ -193,6 +191,17 @@ def botsRequest(step, consumer, username, session_token):
         {'$push' : {'leaderboard' : leaderboard}}
     )
     
+def getResult(consumer, meta):
+    global m_ids
+    global dist_matrix
+    score = 0
+    meta = metrix(consumer, meta, m_ids, dist_matrix)
+    collection = connectToDB('food', 'data1')
+    for item in meta:
+        if item['isBought']:
+            score += collection.find_one({'_id' : ObjectId(item['_id'])})['price']    
+    return [meta, score]
+
 @app.route('/game/score', methods = ['GET'])
 def score():
     try:
