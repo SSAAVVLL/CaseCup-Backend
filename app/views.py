@@ -3,7 +3,7 @@ from flask import request, jsonify, abort, make_response
 from pymongo import MongoClient
 from bson.objectid import ObjectId
 import jwt, json, pymongo, random
-from straight_matrix import *
+#from straight_matrix import *
 
 '''*****************************************************
                 Connection to MongoDB
@@ -17,8 +17,8 @@ client = MongoClient(host, port)
                     Matrix for Bots
 *****************************************************'''
 
-m_ids = init_ids()
-dist_matrix = init_mat()
+#m_ids = init_ids()
+#dist_matrix = init_mat()
 '''*****************************************************
                     Generates JWT
 *****************************************************'''
@@ -141,7 +141,7 @@ def sendInfoToConsumer( session_token, user, day = 0, step = 0, score = 0, meta 
                 if 'consumer' in item:
                     consumer = item['consumer']['item'][0]['_id']
                     break   
-        meta, score = getResult(consumer, reformatTo(meta)) #meta
+        meta, score = getResult(consumer, meta)#reformatTo(meta))
         botsRequest((step + day * 7), consumer, user, session_token, score)
         value =  { 'step' : step + day * 7, 
                  'result' : {
@@ -157,7 +157,7 @@ def sendInfoToConsumer( session_token, user, day = 0, step = 0, score = 0, meta 
     return { 'score' : score, 'meta' : meta }
 
 def getNewConsumer(session_token, day = 0, step = 0, score = 0):
-    step = (step + 1) % 8
+    step = (step + 1) % 9
     if step == 0:
         step += 1
         day += 1
@@ -180,9 +180,9 @@ def botsRequest(step, consumer, username, session_token, score):
         'step' : step,
         'scores' : {
             username : score,
-            'Oleg_1' : getResult(consumer,random_bot(m_ids))[1], #testGenerateScore(score),
-            'Oleg_2' : getResult(consumer, matrix_bot(consumer, m_ids, dist_matrix))[1],  #testGenerateScore(score),
-            'Oleg_3' : getResult(consumer,random_bot(m_ids))[1]  #testGenerateScore(score)
+            'Oleg_1' : getResult(consumer, testGenerateScore(score)),#random_bot(m_ids))[1], 
+            'Oleg_2' : getResult(consumer, testGenerateScore(score)),#matrix_bot(consumer, m_ids, dist_matrix))[1],  
+            'Oleg_3' : getResult(consumer, testGenerateScore(score))#random_bot(m_ids))[1]              
             }
     }
     collection = connectToDB('tets', 'users')
@@ -195,8 +195,8 @@ def getResult(consumer, meta):
     global m_ids
     global dist_matrix
     score = 0
-    meta = metrix(consumer, meta, m_ids, dist_matrix)
-    #meta = testSend(meta)
+    #meta = metrix(consumer, meta, m_ids, dist_matrix)
+    meta = testSend(meta)
     collection = connectToDB('food', 'data1')
     for item in meta:
         if item['isBought']:
@@ -211,16 +211,25 @@ def score():
         payload = decodeJwt(token)
         collection = connectToDB('tets', 'users')
         leaderboard = collection.find_one({'_id' : ObjectId(payload['session_token'])})
-        leaderboard = leaderboard['leaderboard'][-1]
+        leaderboard = leaderboard['leaderboard']
+        
         response = make_response(jsonify( token = token, leaderboard = leaderboard), 200)
         response.headers['Access-Control-Allow-Origin'] = '*'
         return response
     except Exception as err:
         abort(err)
 
+def sum_score(leaderboard):
+    sum_leaderboard = leaderboard[0]['scores'].copy()
+    for i in range(1,len(leaderboard)):
+        leaderboard[i] =  leaderboard[i]['scores']
+        for key in  leaderboard[i].keys():
+            sum_leaderboard[key] += leaderboard[i][key]
+    return sum_leaderboard
+
 @app.route('/game/history', methods = ['GET'])
 
-@app.route('/items' , methods = ['POST'])
+@app.route('/items/category' , methods = ['POST'])
 def items():
     try:
         request_json = request.get_json()
@@ -228,14 +237,16 @@ def items():
         size = request_json['size']
         filt = request_json['filter']
         collection = connectToDB('food', 'mods')
+        filt['is_category'] = True
         if 'name' in filt:
             filt['name'] = { '$regex' : filt['name'], '$options' : 'i'}
         data = list(collection.find(filt, limit = size, skip = current).sort('name'))
+        searched = collection.count_documents(filt)
         for item in data:
-            data
-        for i in range(len(data)):
+            data += list(collection.find())
+        for i in range(len(data)):   
             data[i]['_id'] = str(data[i]['_id'])
-        meta = { 'searched' : collection.count_documents(filt) }
+        meta = { 'searched' :  }
         response = make_response(jsonify(data = data, meta = meta), 200)
         response.headers['Access-Control-Allow-Origin'] = '*'
         return response
