@@ -71,7 +71,7 @@ def metrix(_idc, _id, m_ids, dist_matrix):
     j = m_ids.index(_idc)
     dists = dist_matrix[j].tolist()
     dists_sorted = sorted(dists)
-    for i in range(1,1001):
+    for i in range(1,101):
         k = dists_sorted[i]
         n = dists.index(k)
         cart.append(n)
@@ -79,7 +79,7 @@ def metrix(_idc, _id, m_ids, dist_matrix):
         zid = m_ids.index(i)
         
         if zid in cart:
-            if cart.index(zid) < random.randint(0,1001):
+            if cart.index(zid) < random.randint(0,100):
                 cart_final[i] = True
             else: 
                 cart_final[i] = False
