@@ -237,7 +237,6 @@ def items():
         size = request_json['size']
         filt = request_json['filter']
         collection = connectToDB('food', 'mods')
-        filt['is_category'] = True
         if 'name' in filt:
             filt['name'] = { '$regex' : filt['name'], '$options' : 'i'}
         data = list(collection.find(filt, limit = size, skip = current).sort('name'))
@@ -260,7 +259,7 @@ def testSend(data):
     return data
 def testGetConsumer():
     collection = connectToDB('food', 'mods')
-    return {'type': '', 'item': list(collection.aggregate([{'$sample' : { 'size' : 1}}]))}
+    return {'type': '', 'item': list(collection.aggregate([{'$match': {'is_category': False}}, {'$sample' : { 'size' : 1}}]))}
 
 def testGenerateScore(score):
     bot_score = random.randint(0, score + score // 2)

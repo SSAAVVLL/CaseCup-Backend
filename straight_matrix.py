@@ -70,11 +70,15 @@ def metrix(_idc, _id, m_ids, dist_matrix):
     cart_final = {}
     j = m_ids.index(_idc)
     dists = dist_matrix[j].tolist()
-    dists_sorted = sorted(dists)
+    items = []
+    for i in range(len(dists)):
+        items.append({'index': i, 'item': dists[i]})
+    dists_sorted = sorted(items, key=lambda k: k['item'])
     for i in range(1,10001):
-        k = dists_sorted[i]
-        n = dists.index(k)
-        cart.append(n)
+	
+        item = dists_sorted[i]
+        #n = dists.index(k)
+        cart.append(item['index'])
     for i in _id:
         zid = m_ids.index(i)
         
